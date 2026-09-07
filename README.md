@@ -45,8 +45,10 @@ cd a-pmanger
 pip install -r requirements.txt --break-system-packages
 
 # 4. Run the app
-python run.py
+python3 run.py
 ```
+
+> 💡 Note: On newer Linux distros (Debian/Ubuntu based), `pip` blocks system-wide installs by default — `--break-system-packages` is needed to bypass that.
 
 ### 📱 Termux (Android)
 
@@ -67,7 +69,7 @@ cd a-pmanger
 pip install -r requirements.txt
 
 # 6. Run the app
-python run.py
+python3 run.py
 ```
 
 ---
@@ -77,19 +79,35 @@ python run.py
 After installation, simply run:
 
 ```bash
-python run.py
+python3 run.py
 ```
 
 Follow the on-screen menu to:
 
 - ➕ Add a new password
 - 📋 View saved passwords
-- ✏️ Edit an existing entry
 
 > 💡 Tip: Never share your master password with anyone.
 
 ---
 
+## 🆕 What's New in v1.1
+
+- 🐛 Fixed SHA256 hashing bug
+- 🐛 Fixed Key-related bug
+- 🔄 Changed `python` to `python3`
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Master password encryption
+- [ ] Export / Import passwords
+- [ ] Password generator
+- [ ] Auto-lock after inactivity
+- [ ] GUI version (future)
+
+---
 
 ## 🤝 Contributing
 

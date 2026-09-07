@@ -1,4 +1,4 @@
-from cryptography.fernet import Fernet 
+from cryptography.fernet import Fernet, InvalidToken
 from rich.prompt import Prompt 
 from rich.table import Table
 from rich.console import Console
@@ -7,6 +7,7 @@ from prompt_toolkit.completion import WordCompleter
 import sqlite3
 import base64
 import hashlib
+import tempfile
 import os
 
 
@@ -62,40 +63,54 @@ def help():
 
 
 
-def manual_key(password):
-    hash_key = hashlib.sha256(password.encode()).digest()
-    key =  base64.urlsafe_b64encode(hash_key)
+def manual_key(password: str, salt: bytes = None):
+    if salt is None:
+        salt = os.urandom(16)
+    hash_key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
+    key =  base64.urlsafe_b64encode(hash_key), salt
     return key
 
 
                                  
 def encrypt_file():
-    password = input("Enter key: ")
-    key = manual_key(password)
+    password = Prompt.ask("Enter key: ", password=True)
+    key, salt = manual_key(password)
     cipher = Fernet(key)
 
     with open("store", "rb") as f:
         file_data = f.read()
     
+    dir_ = os.path.dirname(os.path.abspath("store.encrypted")) or "."
+    fd, temp_path = tempfile.mkstemp(dir=dir_)
     #file encrypt 
     encrypt_data = cipher.encrypt(file_data)
-    with open("store.encrypted", "wb") as f:
-        f.write(encrypt_data)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(salt + encrypt_data)
+        os.replace(temp_path, "store.encrypted")
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
     os.system("shred -u -z -n 3 store")
 
 
 
 def decrypt_file():
-    password = input("Enter key: ")
-    key = manual_key(password)
-    cipher = Fernet(key)
+    password = Prompt.ask("Enter password: ", password=True)
 
     with open("store.encrypted", "rb") as f:
-        file_data = f.read()
-        decrypt_data = cipher.decrypt(file_data)
+        raw = f.read()
+    salt, decrypt_data = raw[:16], raw[16:]
+    key, _ = manual_key(password, salt)
+    cipher = Fernet(key)
+    file_data = cipher.decrypt(decrypt_data)
     
-    cursor.execute("SELECT * FROM passwords")
-    rows = cursor.fetchall()
+    conn = sqlite3.connect(":memory:")
+    conn.deserialize(file_data)
+    cur = conn.execute("SELECT * FROM passwords")
+    rows = cur.fetchall()
+    conn.close()
     #create table with rich
     t = Table()
     t.add_column("ID")
@@ -128,7 +143,7 @@ while True:
     elif cmd == "show":
         try:
             decrypt_file()
-        except:
+        except InvalidToken:
             print(f"[{r}!{rs}] invalid key")
 
     elif cmd == "help":
