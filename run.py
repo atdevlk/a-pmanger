@@ -131,6 +131,24 @@ while True:
 
     if cmd == "add":
         while True:
+            if os.path.exists("store.encrypted"):
+                password = Prompt.ask("Enter key: ", password=True)
+                with open("store.encrypted", "rb") as f:
+                    raw = f.read()
+                salt, decrypt_data = raw[:16], raw[16:]
+                key, _ = manual_key(password, salt)
+                cipher = Fernet(key)
+                try:
+                    file_data = cipher.decrypt(decrypt_data)
+                except InvalidToken:
+                    print(f"[{r}!{rs}] invalid key")
+                    break
+                with open("store", "wb") as f:
+                    f.write(file_data)
+                os.remove("store.encrypted")
+                conn = sqlite3.connect("store")
+                cursor = conn.cursor()
+
             email = Prompt.ask("Enter Email")
             password = Prompt.ask("Enter Password")
             cursor.execute(
@@ -159,5 +177,3 @@ while True:
             print(f"[{r}!{rs}] Command not found")
         
         wrong_try = wrong_try + 1
-
-    
